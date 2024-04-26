@@ -1,0 +1,37 @@
+- hosts: all
+  become: yes
+  tasks:
+
+  - name: Install Docker
+    apt:
+      name: docker.io
+      state: present
+      update_cache: yes
+
+  - name: Install apt-transport-https, curl, and gnupg
+    apt:
+      name: ['apt-transport-https', 'curl', 'gnupg']
+      state: present
+
+  - name: Disable swap
+    command: swapoff -a
+    when: ansible_swaptotal_mb > 0
+
+  - name: Install Kubernetes repository key
+    shell: |
+      curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+    args:
+      executable: /bin/bash
+    become: yes
+
+  - name: Add Kubernetes repository to sources list
+    copy:
+      content: 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /'
+      dest: /etc/apt/sources.list.d/kubernetes.list
+      owner: root
+      group: root
+      mode: '0644'
+
+  - name: Update APT cache
+    apt:
+      update_cache: yes

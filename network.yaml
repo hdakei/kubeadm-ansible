@@ -1,0 +1,6 @@
+- hosts: master1
+  become: yes
+
+  tasks:
+  - name: Deploy Calico network
+    shell: kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml

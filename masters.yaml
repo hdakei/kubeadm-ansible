@@ -1,0 +1,36 @@
+- hosts: masters
+  become: yes
+  serial: 1  # Important to initialize masters one at a time
+
+  tasks:
+  - name: Install Kubernetes components
+    apt:
+      name: "{{ item }}"
+      state: present
+    loop:
+      - kubelet
+      - kubeadm
+      - kubectl
+
+  - name: Initialize the first master
+    command: kubeadm init --pod-network-cidr=10.50.0.0/16
+    when: inventory_hostname == 'master1'
+    register: kubeadm_init
+
+  - name: Create .kube directory
+    file:
+      path: /root/.kube
+      state: directory
+      mode: 0755
+    when: inventory_hostname == 'master1'
+
+  - name: Copy admin.conf to home
+    copy:
+      src: /etc/kubernetes/admin.conf
+      dest: /root/.kube/config
+      remote_src: yes
+    when: inventory_hostname == 'master1'
+
+  - name: Join other masters
+    command: "{{ hostvars['master1']['kubeadm_init'].stdout_lines[-1] }}"
+    when: inventory_hostname != 'master1'
